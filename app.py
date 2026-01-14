@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import mimetypes
 import uuid
 from pathlib import Path
+import html
 
 
 load_dotenv()
@@ -352,4 +353,5 @@ with tab2:
               {media_html}
             </div>
             """, unsafe_allow_html=True)
+
 
