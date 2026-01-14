@@ -256,6 +256,40 @@ section[data-testid="stFileUploaderDropzone"] button{
   white-space:nowrap;
   flex: 0 0 auto;
 }
+            
+/* 1) 命中 Streamlit/ BaseWeb 的输入组件 */
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-baseweb="input"] input,
+div[data-baseweb="textarea"] textarea,
+textarea,
+input {
+  color: #111 !important;
+  -webkit-text-fill-color: #111 !important; /* iOS/Safari/部分安卓 WebView 很关键 */
+  caret-color: #111 !important;
+}
+
+/* 2) placeholder 变灰 */
+div[data-testid="stTextInput"] input::placeholder,
+div[data-testid="stTextArea"] textarea::placeholder,
+div[data-baseweb="input"] input::placeholder,
+div[data-baseweb="textarea"] textarea::placeholder,
+textarea::placeholder,
+input::placeholder {
+  color: rgba(0,0,0,0.45) !important;
+  -webkit-text-fill-color: rgba(0,0,0,0.45) !important;
+}
+
+/* 3) 背景也固定白（避免暗色主题影响） */
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea,
+div[data-baseweb="input"] input,
+div[data-baseweb="textarea"] textarea,
+textarea,
+input {
+  background: #fff !important;
+  border: 1px solid rgba(0,0,0,0.10) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
