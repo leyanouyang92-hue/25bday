@@ -6,6 +6,7 @@ import mimetypes
 import uuid
 from pathlib import Path
 import html
+import re
 
 
 load_dotenv()
@@ -231,6 +232,30 @@ section[data-testid="stFileUploaderDropzone"] button{
   background: rgba(255, 220, 235, 0.65);
   border-radius: 12px;
 }
+            
+            /* 卡片头部：防止名字被时间挤没/覆盖 */
+.card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.card-name{
+  font-weight:900;
+  font-size:16px;
+  max-width:70%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.card-time{
+  font-size:12px;
+  color: var(--muted);
+  white-space:nowrap;
+  flex: 0 0 auto;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -286,21 +311,21 @@ def media_blocks(urls, metas):
     if not urls:
         return ""
 
-    html = '<div class="media-wrap">'
+    html_str = '<div class="media-wrap">'
 
     for i, url in enumerate(urls):
         meta = metas[i] if i < len(metas) else {}
         t = meta.get("type", "")
-        name = meta.get("name", "file")
+        name = html.escape(meta.get("name", "file"))  # ✅ 现在能正常用了
 
         if t.startswith("image/"):
-            html += f'''
+            html_str += f'''
             <div class="media-item">
               <img src="{url}" loading="lazy" />
             </div>
             '''
         elif t.startswith("video/"):
-            html += f'''
+            html_str += f'''
             <div class="media-item">
               <video controls playsinline preload="metadata">
                 <source src="{url}" type="{t}">
@@ -308,15 +333,23 @@ def media_blocks(urls, metas):
             </div>
             '''
         else:
-            html += f'''
+            html_str += f'''
             <div class="media-item file">
               📎 <a href="{url}" target="_blank">{name}</a>
             </div>
             '''
 
-    html += '</div>'
-    return html
+    html_str += '</div>'
+    return html_str
 
+
+def clean_legacy_msg(s: str) -> str:
+    if not s:
+        return ""
+    # 把你之前不小心拼进去的提示/HTML片段尽量剔除（按你实际出现的内容再加规则）
+    s = re.sub(r'hint\s*=\s*""".*?"""', "", s, flags=re.S)
+    s = re.sub(r"<div.*?>.*?</div>", "", s, flags=re.S)  # 粗暴删掉 div 块（只针对旧数据救火）
+    return s.strip()
 
 with tab2:
     data = sb.table("messages") \
@@ -327,31 +360,36 @@ with tab2:
     cols = st.columns(3)
     for i, m in enumerate(data):
         with cols[i % 3]:
-            name = m.get("name") or "匿名"
+            raw_name = (m.get("name") or "").strip()
+            raw_msg  = (m.get("message") or "").strip()
+
+            # 空名兜底
+            display_name = raw_name if raw_name else "匿名"
+
             created = (m.get("created_at") or "")[:19].replace("T", " ")
-            msg = m.get("message") or ""
+
             urls = m.get("media_urls") or []
             metas = m.get("media_meta") or []
 
-            # ✅ 关键：先在 Python 里算好 hint
-            hint = '<div class="mini">左右滑动查看更多 →</div>' if len(urls) > 1 else ""
+            # ✅ 防止用户输入 HTML 把卡片结构“插穿”
+            safe_name = html.escape(display_name)
+            safe_msg  = html.escape(raw_msg).replace("\n", "<br/>")
 
+            hint = '<div class="mini">左右滑动查看更多 →</div>' if len(urls) > 1 else ""
             media_html = media_blocks(urls, metas)
 
             st.markdown(f"""
             <div class="card">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-weight:800; font-size:14px;">{name}</div>
-                <div class="mini">{created}</div>
+              <div class="card-head">
+                <div class="card-name">{safe_name}</div>
+                <div class="card-time">{created}</div>
               </div>
 
-              <div style="margin-top:10px; white-space:pre-wrap; line-height:1.55;">
-                {msg}
+              <div style="margin-top:10px; line-height:1.65;">
+                {safe_msg}
               </div>
 
               {hint}
               {media_html}
             </div>
             """, unsafe_allow_html=True)
-
-
